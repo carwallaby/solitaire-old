@@ -21,6 +21,10 @@ class CSolitaire(Solitaire):
     CARD_TOP = TL_CORNER + (H_LINE * (CARD_WIDTH - 2)) + TR_CORNER
     CARD_BOTTOM = BL_CORNER + (H_LINE * (CARD_WIDTH - 2)) + BR_CORNER
 
+    EMPTY_TOP = TL_CORNER + (" " * (CARD_WIDTH - 2)) + TR_CORNER
+    EMPTY_BOTTOM = BL_CORNER + (" " * (CARD_WIDTH - 2)) + BR_CORNER
+    EMPTY_MIDDLE = V_LINE + (" " * (CARD_WIDTH - 2)) + V_LINE
+
     DECK_DESIGN = "\N{CLOUD}"
 
     MAX_FACE_DOWN_CARDS = Solitaire.COLUMNS - 1  # 1 line each
@@ -85,6 +89,7 @@ class CSolitaire(Solitaire):
         try:
             self._draw_message_box()
             self._draw_ace_piles()
+            self._draw_discard_pile()
         except curses.error:
             self.screen.clear()
             self._draw_message_box()
@@ -109,6 +114,15 @@ class CSolitaire(Solitaire):
             x = (i * self.CARD_WIDTH) + (i + 1)
             self.ace_pile_windows[suit] = self._draw_ace_pile(1, x)
             self._populate_ace_pile(suit)
+
+    def _draw_discard_pile(self):
+        """draws the discard pile window."""
+        x = (self.CARD_WIDTH * (self.COLUMNS - 1)) + self.COLUMNS
+        self.discard_pile_window = self.screen.subwin(self.CARD_HEIGHT + 1,
+                                                      self.CARD_WIDTH + 1,
+                                                      0,
+                                                      x)
+        self._populate_discard_pile()
 
     # ----- messages -----
 
@@ -160,6 +174,50 @@ class CSolitaire(Solitaire):
                        attr)
             self.screen.refresh()
             win.refresh()
+
+    def _populate_discard_pile(self):
+        """fill in discard pile appropriately."""
+        if len(self.discard_pile) == 0:
+            self.discard_pile_window.clear()
+            self.discard_pile_window.addstr(1, 0, self.EMPTY_TOP)
+            self.discard_pile_window.addstr(self.CARD_HEIGHT,
+                                            0,
+                                            self.EMPTY_BOTTOM)
+        else:
+            self.discard_pile_window.clear()
+            card = self.discard_pile[-1]
+            attr = self.RED if card.is_red else 0
+            # draw top of card
+            self.discard_pile_window.addstr(1, 0, self.CARD_TOP)
+            # draw first line with text
+            self.discard_pile_window.addstr(2, 0, self.V_LINE)
+            self.discard_pile_window.addstr(2,
+                                            1,
+                                            self._card_top_str(card),
+                                            attr)
+            self.discard_pile_window.addstr(2,
+                                            self.CARD_WIDTH - 1,
+                                            self.V_LINE)
+            # draw middle lines
+            for i in range(3, self.CARD_HEIGHT - 1):
+                self.discard_pile_window.addstr(i, 0, self.EMPTY_MIDDLE)
+            # draw bottom line with text
+            self.discard_pile_window.addstr(self.CARD_HEIGHT - 1,
+                                            0,
+                                            self.V_LINE)
+            self.discard_pile_window.addstr(self.CARD_HEIGHT - 1,
+                                            1,
+                                            self._card_bottom_str(card),
+                                            attr)
+            self.discard_pile_window.addstr(self.CARD_HEIGHT - 1,
+                                            self.CARD_WIDTH - 1,
+                                            self.V_LINE)
+            # draw bottom of card
+            self.discard_pile_window.addstr(self.CARD_HEIGHT,
+                                            0,
+                                            self.CARD_BOTTOM)
+        self.screen.refresh()
+        self.discard_pile_window.refresh()
 
     # ----- gui builders -----
 
