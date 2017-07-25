@@ -31,7 +31,7 @@ class Solitaire:
                 col._push_card(self.deck.take_card())
             col._push_card(self.deck.take_card().flip())
 
-    # ----- moves -----
+    # ----- discard / deck moves -----
 
     def draw_from_pile(self):
         """draws from the pile into the discard pile."""
@@ -59,6 +59,17 @@ class Solitaire:
         card = self.discard_pile.pop()
         try:
             self.columns[col_idx].add_card(card)
+        except IllegalMoveError as e:
+            # make sure illegal card doesn't disappear into limbo
+            self.discard_pile.append(card)
+            raise e
+        return self
+
+    def discard_to_ace_pile(self):
+        """attempt to move top card on discard to an ace pile."""
+        card = self.discard_pile.pop()
+        try:
+            self.ace_piles[card.suit].add_card(card)
         except IllegalMoveError as e:
             # make sure illegal card doesn't disappear into limbo
             self.discard_pile.append(card)
