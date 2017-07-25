@@ -177,6 +177,8 @@ class CSolitaire(Solitaire):
 
     def _populate_discard_pile(self):
         """fill in discard pile appropriately."""
+        # TODO: break up into reusable things. same w/ ace card constuction
+        # TODO: set this up so it displays top 3 cards if there are 3+
         if len(self.discard_pile) == 0:
             self.discard_pile_window.clear()
             self.discard_pile_window.addstr(1, 0, self.EMPTY_TOP)
