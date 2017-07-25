@@ -1,1 +1,1 @@
-from .stacks import *
+from .solitaire import *

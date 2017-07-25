@@ -185,6 +185,12 @@ class Column(Stack):
         correct_value = card.value == self.top_card.value - 1
         return correct_color and correct_value
 
+    def _push_card(self, card):
+        """allows cards to be added to column that don't fit the rules.
+        used for populating the columns."""
+        self.cards.append(card)
+        return self
+
 
 # ----- errors -----
 
