@@ -23,6 +23,12 @@ class CSolitaire(Solitaire):
 
     DECK_DESIGN = "\N{CLOUD}"
 
+    MAX_FACE_DOWN_CARDS = Solitaire.COLUMNS - 1  # 1 line each
+    MAX_FACE_UP_COVERED_CARDS = 13  # 2 lines each
+    MAX_COL_HEIGHT = (MAX_FACE_DOWN_CARDS +
+                      (2 * MAX_FACE_UP_COVERED_CARDS) +
+                      CARD_HEIGHT)
+
     # ----- main functions -----
 
     def __init__(self, screen, draw=1):
@@ -38,7 +44,6 @@ class CSolitaire(Solitaire):
         self.RED = curses.color_pair(1)
         self.BLUE = curses.color_pair(2)
         self.set_key_mappings()
-
         self.calibrate_screen_size()
 
         self.running = True
@@ -77,12 +82,33 @@ class CSolitaire(Solitaire):
 
     def draw_screen(self):
         """clears and redraws entire screen."""
-        self.draw_message_box()
+        try:
+            self._draw_message_box()
+            self._draw_ace_piles()
+        except curses.error:
+            self.screen.clear()
+            self._draw_message_box()
+            self.set_message("please make your screen larger. :)", self.RED)
 
-    def draw_message_box(self):
+    def _draw_message_box(self):
         """message subwindow that is easily cleared."""
+        try:
+            self.message_box.clear()
+        except AttributeError:
+            pass
+
         self.message_box = self.screen.subwin(self.height - 1, 0)
         self.screen.refresh()
+        self.message_box.refresh()
+
+    def _draw_ace_piles(self):
+        """initializes ace pile windows."""
+        self.ace_pile_windows = {}
+
+        for i, suit in enumerate(Card.SUITS):
+            x = (i * self.CARD_WIDTH) + (i + 1)
+            self.ace_pile_windows[suit] = self._draw_ace_pile(1, x)
+            self._populate_ace_pile(suit)
 
     # ----- messages -----
 
@@ -90,17 +116,62 @@ class CSolitaire(Solitaire):
         """sets message in message box.
         param:
             - msg (str): message to display
+            - attr (int / curses attr): attribute
         """
         self.message_box.clear()
         self.message_box.addstr(msg, attr)
-        self.message_box.refresh()
         self.screen.refresh()
+        self.message_box.refresh()
 
     def clear_message_box(self):
         """clears message box."""
         self.message_box.clear()
-        self.message_box.refresh()
         self.screen.refresh()
+        self.message_box.refresh()
+
+    # ----- gui components -----
+
+    def _draw_ace_pile(self, start_y, start_x):
+        """draws and returns bordered subwindow for ace pile.
+        params:
+            - start_y (int): y-coordinate of top-left
+            - start_x (int): x-coordinate of top-left
+        """
+        win = self.screen.subwin(self.CARD_HEIGHT,
+                                 self.CARD_WIDTH,
+                                 start_y,
+                                 start_x)
+        win.box()
+        self.screen.refresh()
+        win.refresh()
+        return win
+
+    def _populate_ace_pile(self, suit):
+        """fill in ace pile strings if card in ace pile."""
+        pile = self.ace_piles[suit]
+
+        if not pile.is_empty:
+            win = self.ace_pile_windows[suit]
+            attr = self.RED if pile.top_card.is_red else 0
+            win.addstr(1, 1, self._card_top_str(pile.top_card), attr)
+            win.addstr(self.CARD_HEIGHT - 2,
+                       1,
+                       self._card_bottom_str(pile.top_card),
+                       attr)
+            self.screen.refresh()
+            win.refresh()
+
+    # ----- gui builders -----
+
+    def _card_top_str(self, card):
+        """string for top half of card."""
+        space_chars = self.CARD_WIDTH - 5 - len(card.symbol)
+        return " " + card.symbol + (" " * space_chars) + card.display + " "
+
+    def _card_bottom_str(self, card):
+        """string for bottom half of card."""
+        space_chars = self.CARD_WIDTH - 5 - len(card.symbol)
+        return " " + card.display + (" " * space_chars) + card.symbol + " "
 
 
 # ----- curses utilities -----
