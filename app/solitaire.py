@@ -30,3 +30,37 @@ class Solitaire:
             while col.size < i:
                 col._push_card(self.deck.take_card())
             col._push_card(self.deck.take_card().flip())
+
+    # ----- moves -----
+
+    def draw_from_pile(self):
+        """draws from the pile into the discard pile."""
+        if self.deck.is_empty:
+            # fill deck and empty discard if out of cards
+            self.deck.add_cards([c.flip() for c in self.discard_pile])
+            self.deck.cards.reverse()
+            self.discard_pile = []
+        else:
+            drawn = []
+            for _ in range(self.draw):
+                try:
+                    drawn.append(self.deck.take_card().flip())
+                except AssertionError:
+                    # stop if deck is empty
+                    break
+            self.discard_pile += drawn
+        return self
+
+    def discard_to_column(self, col_idx):
+        """attempt to move top card on discard to given column index.
+        param:
+            - col_idx (int): index of column to move to
+        """
+        card = self.discard_pile.pop()
+        try:
+            self.columns[col_idx].add_card(card)
+        except IllegalMoveError as e:
+            # make sure illegal card doesn't disappear into limbo
+            self.discard_pile.append(card)
+            raise e
+        return self

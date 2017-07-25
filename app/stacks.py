@@ -177,9 +177,9 @@ class Column(Stack):
         param:
             - card (card): card to attempt to add
         """
-        if card.value == 13:
-            # always allow kings
-            return True
+        if self.is_empty:
+            # always allow kings on empty columns
+            return card.value == 13
 
         correct_color = card.color != self.top_card.color
         correct_value = card.value == self.top_card.value - 1
