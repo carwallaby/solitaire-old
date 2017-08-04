@@ -28,7 +28,7 @@ class CSolitaire(Solitaire):
     DECK_DESIGN = "\N{CLOUD}"
 
     MAX_FACE_DOWN_CARDS = Solitaire.COLUMNS - 1  # 1 line each
-    MAX_FACE_UP_COVERED_CARDS = 13  # 2 lines each
+    MAX_FACE_UP_COVERED_CARDS = 11  # 2 lines each
     MAX_COL_HEIGHT = (MAX_FACE_DOWN_CARDS +
                       (2 * MAX_FACE_UP_COVERED_CARDS) +
                       CARD_HEIGHT)
@@ -45,6 +45,7 @@ class CSolitaire(Solitaire):
         super().__init__(draw)
 
         self.ace_pile_windows = {}
+        self.column_windows = []
 
         start_curses(self.screen)
         self.RED = curses.color_pair(1)
@@ -94,6 +95,7 @@ class CSolitaire(Solitaire):
             self._draw_ace_piles()
             self._draw_discard_pile()
             self._draw_deck()
+            self._draw_columns()
         except curses.error:
             self.screen.clear()
             self._draw_message_box()
@@ -123,7 +125,7 @@ class CSolitaire(Solitaire):
         try:
             self.discard_pile_window.clear()
         except AttributeError:
-            x = (self.CARD_WIDTH * (self.COLUMNS - 1)) + self.COLUMNS
+            x = (self.CARD_WIDTH * (self.COLUMNS - 2)) + self.COLUMNS
             self.discard_pile_window = self.screen.subwin(self.CARD_HEIGHT + 1,
                                                           self.CARD_WIDTH + 1,
                                                           0,
@@ -135,13 +137,24 @@ class CSolitaire(Solitaire):
         try:
             self.deck_window.clear()
         except AttributeError:
-            x = (self.CARD_WIDTH * self.COLUMNS) + self.COLUMNS + 2
+            x = (self.CARD_WIDTH * (self.COLUMNS - 1)) + self.COLUMNS + 2
             self.deck_window = self.screen.subwin(self.CARD_HEIGHT + 1,
                                                   self.CARD_WIDTH + 1,
                                                   0,
                                                   x)
 
         self._populate_deck()
+
+    def _draw_columns(self):
+        """draws the columns."""
+        if not self.column_windows:
+            for i in range(0, self.COLUMNS):
+                y = self.CARD_HEIGHT + 3
+                x = (i * self.CARD_WIDTH) + (i + 1)
+                self.column_windows.append(self._draw_column(y, x))
+
+        for i in range(0, self.COLUMNS):
+            self._populate_column(i)
 
     # ----- messages -----
 
@@ -182,6 +195,16 @@ class CSolitaire(Solitaire):
                                  start_y,
                                  start_x)
         win.box()
+        self.screen.refresh()
+        win.refresh()
+        return win
+
+    def _draw_column(self, start_y, start_x):
+        """draws and returns column window."""
+        win = self.screen.subwin(self.MAX_COL_HEIGHT,
+                                 self.CARD_WIDTH + 1,
+                                 start_y,
+                                 start_x)
         self.screen.refresh()
         win.refresh()
         return win
@@ -263,6 +286,29 @@ class CSolitaire(Solitaire):
         self.screen.refresh()
         self.deck_window.refresh()
 
+    def _populate_column(self, idx):
+        win = self.column_windows[idx]
+        col = self.columns[idx]
+        win.clear()
+
+        if col.is_empty:
+            win.addstr(1, 0, self.EMPTY_TOP)
+            win.addstr(self.CARD_HEIGHT, 0, self.EMPTY_BOTTOM)
+        else:
+            y = 1
+            for card in col.cards:
+                if card == col.top_card:
+                    self._draw_full_card(win, card, y)
+                elif card.face_up:
+                    self._draw_face_up_covered_card(win, card, y)
+                    y += 2
+                else:
+                    self._draw_face_down_covered_card(win, y)
+                    y += 1
+
+        self.screen.refresh()
+        win.refresh()
+
     # ----- gui builders -----
 
     def _card_top_str(self, card):
@@ -279,6 +325,39 @@ class CSolitaire(Solitaire):
         """string for one alternate for deck design."""
         return (self.V_LINE + " " + self.DECK_DESIGN + "  " +
                 self.DECK_DESIGN + " " + self.V_LINE)
+
+    def _draw_full_card(self, win, card, start_y):
+        attr = self.RED if card.is_red else 0
+        # draw top of card
+        win.addstr(start_y, 0, self.CARD_TOP)
+        # draw first line with text
+        win.addstr(start_y + 1, 0, self.V_LINE)
+        win.addstr(start_y + 1, 1, self._card_top_str(card), attr)
+        win.addstr(start_y + 1, self.CARD_WIDTH - 1, self.V_LINE)
+        # draw middle lines
+        for i in range(2, self.CARD_HEIGHT - 2):
+            win.addstr(start_y + i, 0, self.EMPTY_MIDDLE)
+        # draw bottom line with text
+        win.addstr(start_y + (self.CARD_HEIGHT - 2), 0, self.V_LINE)
+        win.addstr(start_y + (self.CARD_HEIGHT - 2),
+                   1,
+                   self._card_bottom_str(card),
+                   attr)
+        win.addstr(start_y + (self.CARD_HEIGHT - 2),
+                   self.CARD_WIDTH - 1,
+                   self.V_LINE)
+        # draw bottom of card
+        win.addstr(start_y + (self.CARD_HEIGHT - 1), 0, self.CARD_BOTTOM)
+
+    def _draw_face_down_covered_card(self, win, start_y):
+        win.addstr(start_y, 0, self.CARD_TOP)
+
+    def _draw_face_up_covered_card(self, win, card, start_y):
+        attr = self.RED if card.is_red else 0
+        win.addstr(start_y, 0, self.CARD_TOP)
+        win.addstr(start_y + 1, 0, self.V_LINE)
+        win.addstr(start_y + 1, 1, self._card_top_str(card), attr)
+        win.addstr(start_y + 1, self.CARD_WIDTH - 1, self.V_LINE)
 
 
 # ----- curses utilities -----
