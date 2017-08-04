@@ -113,6 +113,9 @@ class AcePile(Stack):
         if card.value == 1:
             # always allow aces
             return True
+        elif self.is_empty:
+            # don't allow non-aces on empty piles
+            return False
         return (card.suit == self.top_card.suit and
                 card.value == self.top_card.value + 1)
 
@@ -154,7 +157,7 @@ class Column(Stack):
         """removes and returns top card in deck.
         overrides super and adds check to flip top card."""
         card = super().take_card()
-        if not self.top_card.face_up:
+        if not self.is_empty and not self.top_card.face_up:
             self.top_card.flip()
         return card
 

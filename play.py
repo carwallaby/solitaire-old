@@ -95,7 +95,8 @@ class CSolitaire(Solitaire):
             ord("5"): partial(self.select_col, 4),
             ord("6"): partial(self.select_col, 5),
             ord("7"): partial(self.select_col, 6),
-            ord("d"): self.select_discard
+            ord("d"): self.select_discard,
+            ord("N"): self.new_game
         }
 
     def draw_screen(self):
@@ -190,6 +191,13 @@ class CSolitaire(Solitaire):
 
     # ----- overrides and moves -----
 
+    def new_game(self):
+        self.screen.clear()
+        self.ace_pile_windows = {}
+        self.column_windows = []
+        super().reset_game(1)
+        self.draw_screen()
+
     def draw_from_pile(self):
         super().draw_from_pile()
         self._draw_deck()
@@ -234,7 +242,7 @@ class CSolitaire(Solitaire):
             ord("a"): partial(self.column_to_ace_pile, col_idx)
         }
 
-        cols = [ord(str(i)) for i in range(0, self.COLUMNS) if i != col_idx]
+        cols = [i for i in range(0, self.COLUMNS) if i != col_idx]
 
         while True:
             move = self.screen.getch()
@@ -248,7 +256,7 @@ class CSolitaire(Solitaire):
                 idx = num_to_select + 1
                 if self.columns[col_idx].cards[(idx * -1)].face_up:
                     num_to_select += 1
-            elif move in cols:
+            elif (int(chr(move)) - 1) in cols:
                 self.column_to_column(col_idx,
                                       int(chr(move)) - 1,
                                       num_to_select)
