@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import curses
 from app import *
+from functools import partial
 
 
 class CSolitaire(Solitaire):
@@ -61,6 +62,7 @@ class CSolitaire(Solitaire):
         while self.running:
             move = self.screen.getch()
             if move in self.KEY_MAPPING:
+                self.clear_message_box()
                 self.KEY_MAPPING[move]()
         stop_curses(self.screen)
 
@@ -85,7 +87,15 @@ class CSolitaire(Solitaire):
         self.KEY_MAPPING = {
             curses.KEY_RESIZE: self.calibrate_screen_size,
             ord("q"): self.confirm_quit,
-            ord(" "): self.draw_from_pile
+            ord(" "): self.draw_from_pile,
+            ord("1"): partial(self.select_col, 0),
+            ord("2"): partial(self.select_col, 1),
+            ord("3"): partial(self.select_col, 2),
+            ord("4"): partial(self.select_col, 3),
+            ord("5"): partial(self.select_col, 4),
+            ord("6"): partial(self.select_col, 5),
+            ord("7"): partial(self.select_col, 6),
+            ord("d"): self.select_discard
         }
 
     def draw_screen(self):
@@ -149,8 +159,11 @@ class CSolitaire(Solitaire):
         """draws the columns."""
         if not self.column_windows:
             for i in range(0, self.COLUMNS):
-                y = self.CARD_HEIGHT + 3
+                y = self.CARD_HEIGHT + 5
                 x = (i * self.CARD_WIDTH) + (i + 1)
+                self.screen.addstr(y - 1,
+                                   (x + ((self.CARD_WIDTH - 1) // 2)),
+                                   str(i + 1))
                 self.column_windows.append(self._draw_column(y, x))
 
         for i in range(0, self.COLUMNS):
@@ -175,12 +188,91 @@ class CSolitaire(Solitaire):
         self.screen.refresh()
         self.message_box.refresh()
 
-    # ----- overrides -----
+    # ----- overrides and moves -----
 
     def draw_from_pile(self):
         super().draw_from_pile()
         self._draw_deck()
         self._draw_discard_pile()
+
+    def discard_to_column(self, col_idx):
+        try:
+            super().discard_to_column(col_idx)
+            self.draw_screen()
+        except IllegalMoveError:
+            self.draw_screen()
+            self.set_message("illegal move! :(", self.RED)
+
+    def discard_to_ace_pile(self):
+        try:
+            super().discard_to_ace_pile()
+            self.draw_screen()
+        except IllegalMoveError:
+            self.draw_screen()
+            self.set_message("illegal move! :(", self.RED)
+
+    def column_to_column(self, src_idx, dest_idx, num_cards):
+        try:
+            super().column_to_column(src_idx, dest_idx, num_cards)
+            self.draw_screen()
+        except IllegalMoveError:
+            self.draw_screen()
+            self.set_message("illegal move! :(", self.RED)
+
+    def column_to_ace_pile(self, col_idx):
+        try:
+            super().column_to_ace_pile(col_idx)
+            self.draw_screen()
+        except IllegalMoveError:
+            self.draw_screen()
+            self.set_message("illegal move! :(", self.RED)
+
+    def select_col(self, col_idx):
+        num_to_select = 1
+
+        selected_key_map = {
+            ord("a"): partial(self.column_to_ace_pile, col_idx)
+        }
+
+        cols = [ord(str(i)) for i in range(0, self.COLUMNS) if i != col_idx]
+
+        while True:
+            move = self.screen.getch()
+            if move in selected_key_map:
+                selected_key_map[move]()
+                break
+            elif move == curses.KEY_DOWN:
+                if num_to_select > 1:
+                    num_to_select -= 1
+            elif move == curses.KEY_UP:
+                idx = num_to_select + 1
+                if self.columns[col_idx].cards[(idx * -1)].face_up:
+                    num_to_select += 1
+            elif move in cols:
+                self.column_to_column(col_idx,
+                                      int(chr(move)) - 1,
+                                      num_to_select)
+                break
+            else:
+                break
+
+    def select_discard(self):
+        selected_key_map = {
+            ord("a"): self.discard_to_ace_pile,
+            ord("1"): partial(self.discard_to_column, 0),
+            ord("2"): partial(self.discard_to_column, 1),
+            ord("3"): partial(self.discard_to_column, 2),
+            ord("4"): partial(self.discard_to_column, 3),
+            ord("5"): partial(self.discard_to_column, 4),
+            ord("6"): partial(self.discard_to_column, 5),
+            ord("7"): partial(self.discard_to_column, 6)
+        }
+
+        move = self.screen.getch()
+        if move in selected_key_map:
+            selected_key_map[move]()
+        else:
+            pass
 
     # ----- gui components -----
 
@@ -214,6 +306,7 @@ class CSolitaire(Solitaire):
         pile = self.ace_piles[suit]
         win = self.ace_pile_windows[suit]
         win.clear()
+        win.box()
 
         if not pile.is_empty:
             attr = self.RED if pile.top_card.is_red else 0

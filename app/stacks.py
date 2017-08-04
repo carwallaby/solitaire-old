@@ -168,7 +168,7 @@ class Column(Stack):
         cards = self.cards[(num_cards * -1):]
         self.cards = self.cards[:(num_cards * -1)]
 
-        if not self.top_card.face_up:
+        if not self.is_empty and not self.top_card.face_up:
             self.top_card.flip()
         return cards
 

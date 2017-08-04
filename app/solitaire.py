@@ -75,3 +75,27 @@ class Solitaire:
             self.discard_pile.append(card)
             raise e
         return self
+
+    # TODO: possibly be able to move cards from ace pile.
+
+    # ----- column moves -----
+
+    def column_to_column(self, src_idx, dest_idx, num_cards):
+        column_snapshot = [card for card in self.columns[src_idx].cards]
+        try:
+            cards = self.columns[src_idx].take_cards(num_cards)
+            self.columns[dest_idx].add_cards(cards)
+        except IllegalMoveError as e:
+            self.columns[src_idx].cards = column_snapshot
+            raise e
+        return self
+
+    def column_to_ace_pile(self, col_idx):
+        column_snapshot = [card for card in self.columns[col_idx].cards]
+        try:
+            card = self.columns[col_idx].take_card()
+            self.ace_piles[card.suit].add_card(card)
+        except IllegalMoveError as e:
+            self.columns[col_idx].cards = column_snapshot
+            raise e
+        return self
