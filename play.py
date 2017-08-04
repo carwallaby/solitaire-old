@@ -44,6 +44,8 @@ class CSolitaire(Solitaire):
         self.screen = screen
         super().__init__(draw)
 
+        self.ace_pile_windows = {}
+
         start_curses(self.screen)
         self.RED = curses.color_pair(1)
         self.BLUE = curses.color_pair(2)
@@ -81,7 +83,8 @@ class CSolitaire(Solitaire):
         """initializes key mappings."""
         self.KEY_MAPPING = {
             curses.KEY_RESIZE: self.calibrate_screen_size,
-            ord("q"): self.confirm_quit
+            ord("q"): self.confirm_quit,
+            ord(" "): self.draw_from_pile
         }
 
     def draw_screen(self):
@@ -90,6 +93,7 @@ class CSolitaire(Solitaire):
             self._draw_message_box()
             self._draw_ace_piles()
             self._draw_discard_pile()
+            self._draw_deck()
         except curses.error:
             self.screen.clear()
             self._draw_message_box()
@@ -108,21 +112,36 @@ class CSolitaire(Solitaire):
 
     def _draw_ace_piles(self):
         """initializes ace pile windows."""
-        self.ace_pile_windows = {}
-
         for i, suit in enumerate(Card.SUITS):
-            x = (i * self.CARD_WIDTH) + (i + 1)
-            self.ace_pile_windows[suit] = self._draw_ace_pile(1, x)
+            if not self.ace_pile_windows.get(suit):
+                x = (i * self.CARD_WIDTH) + (i + 1)
+                self.ace_pile_windows[suit] = self._draw_ace_pile(1, x)
             self._populate_ace_pile(suit)
 
     def _draw_discard_pile(self):
         """draws the discard pile window."""
-        x = (self.CARD_WIDTH * (self.COLUMNS - 1)) + self.COLUMNS
-        self.discard_pile_window = self.screen.subwin(self.CARD_HEIGHT + 1,
-                                                      self.CARD_WIDTH + 1,
-                                                      0,
-                                                      x)
+        try:
+            self.discard_pile_window.clear()
+        except AttributeError:
+            x = (self.CARD_WIDTH * (self.COLUMNS - 1)) + self.COLUMNS
+            self.discard_pile_window = self.screen.subwin(self.CARD_HEIGHT + 1,
+                                                          self.CARD_WIDTH + 1,
+                                                          0,
+                                                          x)
         self._populate_discard_pile()
+
+    def _draw_deck(self):
+        """draws the deck."""
+        try:
+            self.deck_window.clear()
+        except AttributeError:
+            x = (self.CARD_WIDTH * self.COLUMNS) + self.COLUMNS + 2
+            self.deck_window = self.screen.subwin(self.CARD_HEIGHT + 1,
+                                                  self.CARD_WIDTH + 1,
+                                                  0,
+                                                  x)
+
+        self._populate_deck()
 
     # ----- messages -----
 
@@ -142,6 +161,13 @@ class CSolitaire(Solitaire):
         self.message_box.clear()
         self.screen.refresh()
         self.message_box.refresh()
+
+    # ----- overrides -----
+
+    def draw_from_pile(self):
+        super().draw_from_pile()
+        self._draw_deck()
+        self._draw_discard_pile()
 
     # ----- gui components -----
 
@@ -163,9 +189,10 @@ class CSolitaire(Solitaire):
     def _populate_ace_pile(self, suit):
         """fill in ace pile strings if card in ace pile."""
         pile = self.ace_piles[suit]
+        win = self.ace_pile_windows[suit]
+        win.clear()
 
         if not pile.is_empty:
-            win = self.ace_pile_windows[suit]
             attr = self.RED if pile.top_card.is_red else 0
             win.addstr(1, 1, self._card_top_str(pile.top_card), attr)
             win.addstr(self.CARD_HEIGHT - 2,
@@ -179,14 +206,14 @@ class CSolitaire(Solitaire):
         """fill in discard pile appropriately."""
         # TODO: break up into reusable things. same w/ ace card constuction
         # TODO: set this up so it displays top 3 cards if there are 3+
+        self.discard_pile_window.clear()
+
         if len(self.discard_pile) == 0:
-            self.discard_pile_window.clear()
             self.discard_pile_window.addstr(1, 0, self.EMPTY_TOP)
             self.discard_pile_window.addstr(self.CARD_HEIGHT,
                                             0,
                                             self.EMPTY_BOTTOM)
         else:
-            self.discard_pile_window.clear()
             card = self.discard_pile[-1]
             attr = self.RED if card.is_red else 0
             # draw top of card
@@ -221,6 +248,21 @@ class CSolitaire(Solitaire):
         self.screen.refresh()
         self.discard_pile_window.refresh()
 
+    def _populate_deck(self):
+        self.deck_window.clear()
+
+        if self.deck.is_empty:
+            self.deck_window.addstr(1, 0, self.EMPTY_TOP)
+            self.deck_window.addstr(self.CARD_HEIGHT, 0, self.EMPTY_BOTTOM)
+        else:
+            self.deck_window.addstr(1, 0, self.CARD_TOP)
+            for i in range(2, 5):
+                self.deck_window.addstr(i, 0, self._face_down_str())
+            self.deck_window.addstr(self.CARD_HEIGHT, 0, self.CARD_BOTTOM)
+
+        self.screen.refresh()
+        self.deck_window.refresh()
+
     # ----- gui builders -----
 
     def _card_top_str(self, card):
@@ -232,6 +274,11 @@ class CSolitaire(Solitaire):
         """string for bottom half of card."""
         space_chars = self.CARD_WIDTH - 5 - len(card.symbol)
         return " " + card.display + (" " * space_chars) + card.symbol + " "
+
+    def _face_down_str(self):
+        """string for one alternate for deck design."""
+        return (self.V_LINE + " " + self.DECK_DESIGN + "  " +
+                self.DECK_DESIGN + " " + self.V_LINE)
 
 
 # ----- curses utilities -----
