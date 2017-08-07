@@ -6,6 +6,7 @@ from functools import partial
 
 class CSolitaire(Solitaire):
     """solitaire with curses!"""
+    # TODO: fix selecting empty column and trying to make move crashing game
 
     # ----- gui constants -----
 
