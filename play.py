@@ -257,6 +257,7 @@ class CSolitaire(Solitaire):
                 idx = num_to_select + 1
                 if self.columns[col_idx].cards[(idx * -1)].face_up:
                     num_to_select += 1
+            # TODO: make this not crash if non-number is typed
             elif (int(chr(move)) - 1) in cols:
                 self.column_to_column(col_idx,
                                       int(chr(move)) - 1,
