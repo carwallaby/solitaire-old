@@ -85,6 +85,10 @@ class Solitaire:
         try:
             cards = self.columns[src_idx].take_cards(num_cards)
             self.columns[dest_idx].add_cards(cards)
+            should_flip = (not self.columns[src_idx].is_empty and
+                           not self.columns[src_idx].top_card.face_up)
+            if should_flip:
+                self.columns[src_idx].top_card.flip()
         except IllegalMoveError as e:
             self.columns[src_idx].cards = column_snapshot
             raise e
@@ -95,6 +99,10 @@ class Solitaire:
         try:
             card = self.columns[col_idx].take_card()
             self.ace_piles[card.suit].add_card(card)
+            should_flip = (not self.columns[col_idx].is_empty and
+                           not self.columns[col_idx].top_card.face_up)
+            if should_flip:
+                self.columns[col_idx].top_card.flip()
         except IllegalMoveError as e:
             self.columns[col_idx].cards = column_snapshot
             raise e

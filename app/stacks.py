@@ -153,14 +153,6 @@ class Column(Stack):
             raise IllegalMoveError()
         return super().add_cards(cards)
 
-    def take_card(self):
-        """removes and returns top card in deck.
-        overrides super and adds check to flip top card."""
-        card = super().take_card()
-        if not self.is_empty and not self.top_card.face_up:
-            self.top_card.flip()
-        return card
-
     def take_cards(self, num_cards):
         """removes and returns num_cards in order.
         param:
@@ -171,8 +163,6 @@ class Column(Stack):
         cards = self.cards[(num_cards * -1):]
         self.cards = self.cards[:(num_cards * -1)]
 
-        if not self.is_empty and not self.top_card.face_up:
-            self.top_card.flip()
         return cards
 
     def _can_add_card(self, card):
